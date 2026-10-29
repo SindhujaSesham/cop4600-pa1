@@ -134,7 +134,9 @@ fn fcfs(
     _config: &Config,
     _rr_elapsed: &mut u64,
 ) -> Option<usize> {
-    // YOUR IMPLEMENTATION GOES HERE
+
+    Some(ci)
+
 }
 
 fn sjf(
@@ -144,7 +146,30 @@ fn sjf(
     _config: &Config,
     _rr_elapsed: &mut u64,
 ) -> Option<usize> {
-    // YOUR IMPLEMENTATION GOES HERE
+    
+    // Find the waiting process with the shortest remaining burst.
+    let shortest = queue
+        .iter()
+        .min_by_key(|&&i| procs[i].remaining);
+
+    // Check whether it should preempt the current process.
+    if let Some(&i) = shortest {
+        if procs[i].remaining < procs[ci].remaining {
+
+            // Stop the currently running OS process.
+            preempt(procs[ci].pid.unwrap());
+
+            // Put it back into the ready queue.
+            queue.push(ci);
+
+            // Tell the scheduler to choose another process.
+            return None;
+        }
+    }
+
+    // No shorter process is waiting, so continue running.
+    Some(ci)
+
 }
 
 fn rr(
@@ -154,7 +179,27 @@ fn rr(
     config: &Config,
     rr_elapsed: &mut u64,
 ) -> Option<usize> {
-    // YOUR IMPLEMENTATION GOES HERE
+    let quantum = config.quantum.unwrap();
+
+    // Current process still has time in its quantum.
+    if *rr_elapsed < quantum {
+        return Some(ci);
+    }
+
+    // If no other processes are waiting, keep running.
+    if queue.is_empty() {
+        *rr_elapsed = 0;
+        return Some(ci);
+    }
+
+    // Quantum expired, and another process is waiting.
+    preempt(procs[ci].pid.unwrap());
+
+    // Return the current process to the back of the queue.
+    queue.push(ci);
+
+    // Let main.rs select the next waiting process.
+    None
 }
 
 fn run_scheduler(config: &Config, out: &mut File) {

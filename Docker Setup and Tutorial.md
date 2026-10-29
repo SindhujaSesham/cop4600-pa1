@@ -65,7 +65,7 @@ Type `exit` to leave the container shell; `--rm` means the container is
 cleaned up automatically (your files, which live on your host via the
 volume mount, are untouched).
 
-### Platform-specific notes
+### Platform-specific notes  
 
 - **Windows**: run these `docker compose` commands from PowerShell, Command Prompt, or a WSL terminal — all work identically. If you keep your project files inside the WSL filesystem (e.g. under `\\wsl$\...` or opened via `code .` from WSL), file-watching and build performance will be noticeably better than a project on the Windows `C:\` drive.
 - **macOS**: the first time you run `docker compose run`, Docker Desktop may prompt for permission to share your project folder — allow it, or the volume mount will fail silently. Apple Silicon (M-series) Macs run this image natively; no configuration needed.

@@ -1,0 +1,6 @@
+processcount 2
+runfor 15
+use sjf
+process name A arrival 0 burst 8
+process name B arrival 2 burst 3
+end
