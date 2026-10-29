@@ -24,17 +24,49 @@ use std::time::Instant;
 /// whether that matters for this assignment's correctness requirements,
 /// and be ready to explain your reasoning either way.
 pub fn spawn_paused(workload_path: &str, ticks: u64) -> Pid {
+
+    let prog = CString::new(workload_path).unwrap();
+            let arg0 = prog.clone();
+            let arg1 = CString::new(ticks.to_string()).unwrap();
+
     match unsafe { fork() }.expect("fork failed") {
         ForkResult::Parent { child } => {
-            kill(child, Signal::SIGSTOP).expect("failed to stop child");
+            loop {
+                match waitpid(child, Some(WaitPidFlag::WUNTRACED)) {
+                    Ok(WaitStatus::Stopped(pid, Signal::SIGSTOP))
+                        if pid == child =>
+                    {
+                        break;
+                    }
+
+                    Err(nix::errno::Errno::EINTR) => {
+                        // A signal interrupted waitpid. Retry.
+                        continue;
+                    }
+
+                    Ok(status) => {
+                        panic!("Unexpected child status: {:?}", status);
+                    }
+
+                    Err(err) => {
+                        panic!("Failed waiting for child stop: {}", err);
+                    }
+                }
+            }
             child
         }
         ForkResult::Child => {
-            let prog = CString::new(workload_path).unwrap();
-            let arg0 = prog.clone();
-            let arg1 = CString::new(ticks.to_string()).unwrap();
-            execvp(&prog, &[arg0, arg1]).expect("execvp failed");
-            unreachable!("execvp does not return on success");
+            // Stop ourselves BEFORE executing the workload.
+            let result = unsafe { libc::raise(libc::SIGSTOP) };
+
+            if result != 0 {
+                unsafe { libc::_exit(127) };
+            }
+
+            // This executes only after the parent sends SIGCONT.
+            let _ = execvp(&prog, &[arg0, arg1]);
+
+            unsafe { libc::_exit(127) };
         }
     }
 }
@@ -72,7 +104,34 @@ pub fn terminate(pid: Pid) {
 /// during cleanup, and to confirm a selected process's completion before
 /// you log it as finished.
 pub fn reap_blocking(pid: Pid) {
-    let _ = waitpid(pid, None);
+    loop {
+        match waitpid(pid, None) {
+            // Child exited normally.
+            Ok(WaitStatus::Exited(_, _)) => {
+                return;
+            }
+
+            // Child was terminated by a signal.
+            Ok(WaitStatus::Signaled(_, _, _)) => {
+                return;
+            }
+
+            // Interrupted syscall: retry the wait.
+            Err(nix::errno::Errno::EINTR) => {
+                continue;
+            }
+
+            // An unexpected child state.
+            Ok(status) => {
+                panic!("Unexpected wait status for {pid}: {status:?}");
+            }
+
+            // Any other error should not be silently ignored.
+            Err(err) => {
+                panic!("Failed to reap child {pid}: {err}");
+            }
+        }
+    }
 }
 
 /// Milliseconds elapsed since a fixed reference point you establish at

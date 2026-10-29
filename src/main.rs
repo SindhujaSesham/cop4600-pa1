@@ -78,9 +78,9 @@ fn parse_input(path: &str) -> Result<Config, String> {
                         arrival: a,
                         burst: b,
                     }),
-                    (None, _, _) => return Err("Error: Missing parameter name".to_string()),
-                    (_, None, _) => return Err("Error: Missing parameter arrival".to_string()),
-                    (_, _, None) => return Err("Error: Missing parameter burst".to_string()),
+                    (None, _, _) => return Err("Error: Missing parameter name.".to_string()),
+                    (_, None, _) => return Err("Error: Missing parameter arrival.".to_string()),
+                    (_, _, None) => return Err("Error: Missing parameter burst.".to_string()),
                 }
             }
             "end" => break,
@@ -89,9 +89,9 @@ fn parse_input(path: &str) -> Result<Config, String> {
     }
 
     let process_count =
-        process_count.ok_or_else(|| "Error: Missing parameter processcount".to_string())?;
-    let runfor = runfor.ok_or_else(|| "Error: Missing parameter runfor".to_string())?;
-    let algorithm = algorithm.ok_or_else(|| "Error: Missing parameter use".to_string())?;
+        process_count.ok_or_else(|| "Error: Missing parameter processcount.".to_string())?;
+    let runfor = runfor.ok_or_else(|| "Error: Missing parameter runfor.".to_string())?;
+    let algorithm = algorithm.ok_or_else(|| "Error: Missing parameter use.".to_string())?;
     if algorithm == "rr" && quantum.is_none() {
         return Err("Error: Missing quantum parameter when use is 'rr'".to_string());
     }
@@ -350,6 +350,7 @@ fn run_scheduler(config: &Config, out: &mut File) {
         if !p.finished {
             if let Some(pid) = p.pid {
                 terminate(pid);
+                reap_blocking(pid);
             }
         }
     }
